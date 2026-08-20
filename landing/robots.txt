@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://moyoapp.co/sitemap.xml

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moyo — Make your money work harder</title>
+<meta name="description" content="Moyo checks your bills, insurance, and cards against what's actually available today, and shows you exactly where you're leaving money on the table.">
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://moyoapp.co">
+<meta property="og:title" content="Moyo — Make your money work harder">
+<meta property="og:description" content="Moyo checks your bills, insurance, and cards against what's actually available today, and shows you exactly where you're leaving money on the table.">
+<meta property="og:image" content="https://moyoapp.co/og-image.png">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Moyo — Make your money work harder">
+<meta name="twitter:description" content="Moyo checks your bills, insurance, and cards against what's actually available today.">
+<meta name="twitter:image" content="https://moyoapp.co/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F0D;
+    --surface:#121814;
+    --surface-2:#171F1A;
+    --ink:#F3F1EA;
+    --ink-dim:#9BA79D;
+    --ink-faint:#5E6960;
+    --accent:#17C964;
+    --accent-dim:#0E7A3D;
+    --brass:#C9A15E;
+    --cyan:#4FD9E8;
+    --line:rgba(243,241,234,0.09);
+    --line-strong:rgba(243,241,234,0.16);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:0.035;
+    z-index:1;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  a{color:inherit;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+
+  header{padding:26px 0;}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-mark{
+    width:34px;height:34px;
+    border-radius:9px;
+    background:linear-gradient(160deg, var(--accent), var(--accent-dim));
+    color:#0B0F0D;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Sora',sans-serif;
+    font-weight:600;
+    font-size:17px;
+  }
+  .brand-text{line-height:1.15;}
+  .brand-name{font-family:'Sora',sans-serif;font-weight:600;font-size:19px;}
+  .brand-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:9.5px;
+    letter-spacing:0.14em;
+    color:var(--accent);
+    text-transform:uppercase;
+  }
+  .nav-cta{
+    border:1px solid var(--line-strong);
+    padding:9px 18px;
+    border-radius:6px;
+    font-size:13.5px;
+    text-decoration:none;
+    color:var(--ink);
+    transition:border-color 0.15s ease;
+  }
+  .nav-cta:hover{border-color:var(--accent);}
+
+  /* HERO */
+  .hero{padding:56px 0 90px;}
+  .hero-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:60px;
+    align-items:center;
+  }
+  h1{
+    font-family:'Sora',sans-serif;
+    font-weight:700;
+    font-size:clamp(38px,5vw,58px);
+    line-height:1.04;
+    letter-spacing:-0.02em;
+    margin:0 0 20px;
+  }
+  h1 .accent-word{
+    background:linear-gradient(90deg, var(--accent-dim), var(--accent) 40%, var(--brass) 70%, var(--accent) 100%);
+    background-size:250% 100%;
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    animation:sweep-in 2.2s ease-out 0.3s both;
+  }
+  @keyframes sweep-in{
+    from{background-position:100% 0;}
+    to{background-position:0% 0;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    h1 .accent-word{animation:none; background-position:0% 0;}
+  }
+  .hero-sub{
+    font-size:16.5px;
+    line-height:1.65;
+    color:var(--ink-dim);
+    max-width:44ch;
+    margin:0 0 32px;
+  }
+  .feature-list{list-style:none;padding:0;margin:0 0 36px;}
+  .feature-list li{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    padding:14px 0;
+    border-top:1px solid var(--line);
+  }
+  .feature-icon{
+    width:34px;height:34px;
+    border-radius:8px;
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    flex-shrink:0;
+    color:var(--accent);
+  }
+  .feature-title{font-size:14.5px;font-weight:600;margin-bottom:2px;}
+  .feature-desc{font-size:13px;color:var(--ink-dim);}
+  .btn-primary{
+    background:var(--accent);
+    color:#0B0F0D;
+    border:none;
+    padding:15px 26px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    border-radius:8px;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .btn-primary:hover{background:#14B058;}
+
+  /* PHONE MOCKUP */
+  .phone-wrap{display:flex;justify-content:center;position:relative;}
+  .phone-glow{
+    position:absolute;
+    width:340px;height:340px;
+    background:radial-gradient(circle, rgba(23,201,100,0.16), transparent 70%);
+    top:20%;
+    z-index:0;
+  }
+  .phone{
+    position:relative;
+    z-index:1;
+    width:290px;
+    background:#080B09;
+    border:6px solid #1C231E;
+    border-radius:38px;
+    padding:14px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,0.6);
+  }
+  .phone-notch{
+    width:90px;height:20px;
+    background:#1C231E;
+    border-radius:12px;
+    margin:0 auto 12px;
+  }
+  .phone-screen{
+    background:var(--surface);
+    border-radius:22px;
+    padding:18px 16px 20px;
+  }
+  .phone-logo-row{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:16px;
+  }
+  .phone-logo{
+    font-family:'Sora',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    color:var(--accent);
+    letter-spacing:0.02em;
+  }
+  .snapshot-card{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 16px;
+    text-align:center;
+    margin-bottom:16px;
+  }
+  .snapshot-label{font-size:11.5px;color:var(--ink-dim);margin-bottom:6px;}
+  .snapshot-amount{
+    font-family:'Sora',sans-serif;
+    font-size:30px;
+    font-weight:500;
+    color:var(--ink);
+  }
+  .snapshot-amount span{color:var(--accent);}
+  .snapshot-period{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+  .snapshot-pill{
+    display:inline-block;
+    margin-top:12px;
+    background:rgba(23,201,100,0.14);
+    color:var(--accent);
+    font-size:11px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:20px;
+  }
+  .opp-list-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:9px;
+  }
+  .opp-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:9px 0;
+    border-top:1px solid var(--line);
+    font-size:12.5px;
+  }
+  .opp-name{font-weight:500;}
+  .opp-note{font-size:10.5px;color:var(--ink-faint);}
+  .opp-amount{font-family:'IBM Plex Mono',monospace;color:var(--accent);font-size:12.5px;}
+  .phone-caption{
+    text-align:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--ink-faint);
+    margin-top:16px;
+  }
+
+  /* PREVIEW GRID */
+  .preview-section{padding:20px 0 90px;}
+  .preview-head{max-width:56ch;margin-bottom:38px;}
+  .section-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:12px;
+  }
+  .preview-head h2{
+    font-family:'Sora',sans-serif;
+    font-weight:600;
+    font-size:clamp(24px,3vw,32px);
+    margin:0;
+  }
+
+  /* ACTIVE BENTO GRID */
+  .bento-grid{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    grid-auto-rows:150px;
+    gap:14px;
+  }
+  .bento-tile{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:22px;
+    overflow:hidden;
+    cursor:default;
+    transition:border-color 0.25s ease, transform 0.25s ease, background 0.25s ease;
+  }
+  .bento-tile:hover{
+    transform:translateY(-3px);
+    border-color:var(--tile-accent, var(--accent));
+    background:var(--surface-2);
+  }
+  .bento-tile.span-2{grid-column:span 2;}
+  .bento-tile.span-2row{grid-row:span 2;}
+  .bento-tile[data-tone="green"]{--tile-accent:var(--accent);}
+  .bento-tile[data-tone="gold"]{--tile-accent:var(--brass);}
+  .bento-tile[data-tone="cyan"]{--tile-accent:var(--cyan);}
+
+  .bento-tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--tile-accent, var(--accent));
+    margin-bottom:8px;
+  }
+  .bento-title{font-size:15px;font-weight:600;margin-bottom:6px;}
+  .bento-desc{font-size:12px;color:var(--ink-dim);line-height:1.5;}
+
+  /* Tile 1: Bill Leak Report — ticking counter that activates on hover */
+  .bento-counter{
+    font-family:'Sora',sans-serif;
+    font-size:38px;
+    font-weight:500;
+    color:var(--ink);
+    margin:10px 0 4px;
+  }
+  .bento-counter span{color:var(--tile-accent, var(--accent));}
+  .counter-value::after{
+    content:"0";
+    transition:content 0.3s;
+  }
+
+  /* Tile 2: Idle Cash — animated growth line */
+  .bento-sparkline{
+    width:100%; height:44px;
+    margin-top:12px;
+  }
+  .bento-sparkline path{
+    stroke:var(--tile-accent, var(--accent));
+    stroke-width:2;
+    fill:none;
+    stroke-dasharray:200;
+    stroke-dashoffset:200;
+    transition:stroke-dashoffset 1.1s ease;
+  }
+  .bento-tile:hover .bento-sparkline path{stroke-dashoffset:0;}
+
+  /* Tile 3: Fee Radar — sweeping radar */
+  .bento-radar{
+    width:64px;height:64px;
+    border-radius:50%;
+    border:1px solid var(--line-strong);
+    position:relative;
+    margin:8px auto 4px;
+  }
+  .bento-radar::before{
+    content:"";
+    position:absolute; inset:12px;
+    border-radius:50%;
+    border:1px solid var(--line-strong);
+  }
+  .bento-radar::after{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, var(--tile-accent, var(--accent)) 0deg, transparent 50deg, transparent 360deg);
+    opacity:0;
+    animation:none;
+  }
+  .bento-tile:hover .bento-radar::after{
+    opacity:0.55;
+    animation:radar-spin 1.6s linear infinite;
+  }
+  @keyframes radar-spin{ to{ transform:rotate(360deg); } }
+
+  /* Tile 4: Subscription Overlap — overlapping circles that cinch together */
+  .bento-overlap{
+    position:relative;
+    height:52px;
+    margin-top:10px;
+  }
+  .bento-overlap .circ{
+    position:absolute; top:0;
+    width:44px; height:44px;
+    border-radius:50%;
+    border:1.5px solid var(--tile-accent, var(--accent));
+    transition:left 0.35s ease;
+  }
+  .bento-overlap .circ.a{left:8px;}
+  .bento-overlap .circ.b{left:38px; opacity:0.6;}
+  .bento-tile:hover .bento-overlap .circ.b{left:26px;}
+
+  /* Tile 5: Card Value — verdict flip */
+  .bento-verdict{
+    margin-top:12px;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:20px;
+    border:1px solid var(--line-strong);
+    color:var(--ink-dim);
+    transition:all 0.3s ease;
+  }
+  .bento-tile:hover .bento-verdict{
+    border-color:var(--tile-accent, var(--brass));
+    color:var(--tile-accent, var(--brass));
+    background:rgba(201,161,94,0.08);
+  }
+
+  .preview-note{font-size:11.5px;color:var(--ink-dim);line-height:1.5;}
+
+  /* TRUST STRIP */
+  .trust-strip{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:36px 0;
+  }
+  .trust-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:28px;
+  }
+  .trust-item{display:flex;gap:12px;align-items:flex-start;}
+  .trust-icon{
+    width:32px;height:32px;
+    border-radius:8px;
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--accent);
+    font-size:14px;
+    flex-shrink:0;
+  }
+  .trust-title{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+  .trust-desc{font-size:12px;color:var(--ink-dim);line-height:1.5;}
+
+  /* SIGNUP */
+  .signup{padding:80px 0 90px;}
+  .signup-inner{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:56px;
+    align-items:start;
+  }
+  .signup-copy h2{
+    font-family:'Sora',sans-serif;
+    font-weight:600;
+    font-size:clamp(26px,3vw,34px);
+    margin:0 0 16px;
+    line-height:1.15;
+  }
+  .signup-copy p{
+    font-size:14.5px;
+    line-height:1.65;
+    color:var(--ink-dim);
+    max-width:42ch;
+    margin:0 0 14px;
+  }
+  form{
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    border-radius:12px;
+    padding:30px;
+  }
+  .field{margin-bottom:18px;}
+  label{
+    display:block;
+    font-size:11.5px;
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.05em;
+    color:var(--ink-dim);
+    margin-bottom:8px;
+    text-transform:uppercase;
+  }
+  select, input[type="text"], input[type="number"], input[type="email"]{
+    width:100%;
+    padding:12px 13px;
+    border:1px solid var(--line-strong);
+    background:var(--bg);
+    color:var(--ink);
+    border-radius:6px;
+    font-family:'Inter',sans-serif;
+    font-size:14.5px;
+  }
+  select:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+  .row-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .submit-btn{
+    width:100%;
+    margin-top:4px;
+    background:var(--accent);
+    color:#0B0F0D;
+    border:none;
+    padding:15px;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .submit-btn:hover{background:#14B058;}
+  .form-fine{font-size:11.5px;color:var(--ink-faint);margin-top:12px;line-height:1.5;}
+  .thankyou{display:none;text-align:center;padding:20px 10px;}
+  .thankyou.active{display:block;}
+  form.hidden{display:none;}
+  .thankyou-mark{font-family:'Sora',sans-serif;font-weight:700;font-size:22px;color:var(--accent);margin-bottom:10px;}
+  .thankyou p{font-size:13.5px;color:var(--ink-dim);line-height:1.6;margin:0;}
+
+  footer{
+    padding:56px 0 32px;
+    border-top:1px solid var(--line);
+  }
+  .footer-top{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr;
+    gap:40px;
+    padding-bottom:36px;
+  }
+  .footer-brand .brand{margin-bottom:14px;}
+  .footer-tagline{font-size:13px;color:var(--ink-dim);max-width:34ch;line-height:1.6;}
+  .footer-col-title{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-bottom:14px;
+  }
+  .footer-links{list-style:none;padding:0;margin:0;}
+  .footer-links li{margin-bottom:10px;}
+  .footer-links a{
+    font-size:13.5px;
+    color:var(--ink-dim);
+    text-decoration:none;
+  }
+  .footer-links a:hover{color:var(--accent);}
+  .footer-bottom{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--ink-faint);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  @media (max-width:700px){
+    .footer-top{grid-template-columns:1fr; gap:28px;}
+    .footer-bottom{flex-direction:column; gap:10px; align-items:flex-start;}
+  }
+
+  @media (max-width:900px){
+    .hero-grid{grid-template-columns:1fr;}
+    .phone-wrap{order:-1;margin-bottom:20px;}
+    .bento-grid{grid-template-columns:1fr 1fr; grid-auto-rows:170px;}
+    .bento-tile.span-2row{grid-row:span 1;}
+    .trust-grid{grid-template-columns:1fr;gap:18px;}
+    .signup-inner{grid-template-columns:1fr;gap:30px;}
+    .row-2{grid-template-columns:1fr;}
+  }
+  @media (max-width:560px){
+    .bento-grid{grid-template-columns:1fr; grid-auto-rows:auto;}
+    .bento-tile.span-2, .bento-tile.span-2row{grid-column:span 1;}
+    .bento-tile{min-height:150px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap header-inner">
+  <div class="brand">
+    <div class="logo-mark">m</div>
+    <div class="brand-text">
+      <div class="brand-name">moyo</div>
+      <div class="brand-tag">Your Financial OS</div>
+    </div>
+  </div>
+  <a href="#signup" class="nav-cta">Get early access</a>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1>Make your money work <span class="accent-word">harder.</span></h1>
+      <p class="hero-sub">Moyo checks your bills, insurance, and cards against what's actually available today, and shows you exactly where you're leaving money on the table.</p>
+
+      <ul class="feature-list">
+        <li>
+          <div class="feature-icon">◎</div>
+          <div>
+            <div class="feature-title">See everything</div>
+            <div class="feature-desc">All your finances in one place, once connected.</div>
+          </div>
+        </li>
+        <li>
+          <div class="feature-icon">◆</div>
+          <div>
+            <div class="feature-title">Find opportunities</div>
+            <div class="feature-desc">Moyo checks your bills and accounts against better options.</div>
+          </div>
+        </li>
+        <li>
+          <div class="feature-icon">→</div>
+          <div>
+            <div class="feature-title">Take action</div>
+            <div class="feature-desc">Clear next steps. You stay in control the whole time.</div>
+          </div>
+        </li>
+      </ul>
+
+      <a href="#signup" class="btn-primary">Get early access →</a>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-glow"></div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-logo-row">
+            <div class="phone-logo">moyo</div>
+            <div style="color:var(--ink-faint);font-size:11px;">9:41</div>
+          </div>
+          <div class="snapshot-card">
+            <div class="snapshot-label">You could keep</div>
+            <div class="snapshot-amount">$<span>4,827</span></div>
+            <div class="snapshot-period">this year</div>
+            <div class="snapshot-pill">6 opportunities found</div>
+          </div>
+          <div class="opp-list-label">Top opportunities</div>
+          <div class="opp-row">
+            <div><div class="opp-name">Insurance</div><div class="opp-note">Potential savings</div></div>
+            <div class="opp-amount">$840</div>
+          </div>
+          <div class="opp-row">
+            <div><div class="opp-name">Credit cards</div><div class="opp-note">Potential savings</div></div>
+            <div class="opp-amount">$620</div>
+          </div>
+          <div class="opp-row">
+            <div><div class="opp-name">Idle cash</div><div class="opp-note">Potential earnings</div></div>
+            <div class="opp-amount">$1,140</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="preview-section">
+  <div class="wrap">
+    <div class="preview-head">
+      <div class="section-eyebrow">What Moyo actually checks</div>
+      <h2>Five ways we've found real money already, tested on real bills.</h2>
+    </div>
+    <div class="bento-grid">
+
+      <div class="bento-tile span-2" data-tone="green">
+        <div class="bento-tag">Bill Leak Report</div>
+        <div class="bento-title">Internet, insurance, cell phone, mortgage</div>
+        <div class="bento-counter">$<span class="counter-value">240</span>–<span class="counter-value">660</span></div>
+        <div class="bento-desc">Compared against current market rates, live, not a cached list.</div>
+      </div>
+
+      <div class="bento-tile span-2row" data-tone="cyan">
+        <div class="bento-tag">Fee Radar</div>
+        <div class="bento-title">Overdraft, ATM, maintenance fees</div>
+        <div class="bento-radar"><div class="radar-dot" style="position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;background:var(--cyan);transform:translate(-50%,-50%);box-shadow:0 0 10px 2px rgba(79,217,232,0.6);"></div></div>
+        <div class="bento-desc" style="text-align:center;">Scans a year of transactions for charges you'd rather not be paying.</div>
+      </div>
+
+      <div class="bento-tile" data-tone="green">
+        <div class="bento-tag">Idle Cash</div>
+        <div class="bento-title">Cash earning near-0%</div>
+        <svg class="bento-sparkline" viewBox="0 0 160 44" preserveAspectRatio="none">
+          <path d="M0,36 L30,32 L60,30 L90,18 L120,10 L160,4"/>
+        </svg>
+        <div class="bento-desc">Flagged against today's top savings rates.</div>
+      </div>
+
+      <div class="bento-tile" data-tone="gold">
+        <div class="bento-tag">Subscription Overlap</div>
+        <div class="bento-title">Redundant charges</div>
+        <div class="bento-overlap">
+          <div class="circ a"></div>
+          <div class="circ b"></div>
+        </div>
+      </div>
+
+      <div class="bento-tile span-2" data-tone="gold">
+        <div class="bento-tag">Card Value Check</div>
+        <div class="bento-title">Is the annual fee actually worth it?</div>
+        <div class="bento-desc">Real spend + your reported perks, weighed against what the card costs.</div>
+        <div class="bento-verdict">◆ verdict: worth it / not worth it</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<section class="trust-strip">
+  <div class="wrap trust-grid">
+    <div class="trust-item">
+      <div class="trust-icon">◈</div>
+      <div>
+        <div class="trust-title">Built with privacy in mind</div>
+        <div class="trust-desc">We don't sell your information, and we never will.</div>
+      </div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">✓</div>
+      <div>
+        <div class="trust-title">You stay in control</div>
+        <div class="trust-desc">Nothing moves or changes without your say-so.</div>
+      </div>
+    </div>
+    <div class="trust-item">
+      <div class="trust-icon">◐</div>
+      <div>
+        <div class="trust-title">Built in the open</div>
+        <div class="trust-desc">We're early. Your feedback genuinely shapes what we build next.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="signup" id="signup">
+  <div class="wrap signup-inner">
+    <div class="signup-copy">
+      <div class="section-eyebrow">Get early access</div>
+      <h2>We're testing this with a small group first.</h2>
+      <p>We're not live yet, this is the first version of Moyo, and we're looking for people who already care about not overpaying to help us get it right.</p>
+      <p>Tell us one thing you're currently paying for. We'll follow up with your Leak Report as soon as it's ready, and you'll be first in line when Moyo opens up.</p>
+    </div>
+
+    <div>
+      <form id="leakForm" action="https://formspree.io/f/mnpaobgk" method="POST">
+        <div class="field">
+          <label for="category">What are you checking?</label>
+          <select id="category" name="category" required>
+            <option value="" disabled selected>Select a category</option>
+            <option>Internet</option>
+            <option>Home or auto insurance</option>
+            <option>Cell phone plan</option>
+            <option>Credit card annual fee / points</option>
+            <option>Something else</option>
+          </select>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="provider">Current provider</label>
+            <input type="text" id="provider" name="provider" placeholder="e.g. Xfinity" required>
+          </div>
+          <div class="field">
+            <label for="amount">What you pay / month</label>
+            <input type="number" id="amount" name="amount" placeholder="e.g. 85" min="0" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" placeholder="you@email.com" required>
+        </div>
+        <button type="submit" class="submit-btn">Find my leak</button>
+        <p class="form-fine">By joining, you agree to hear from us about your results. We're an early-stage product testing an idea, not a bank or a licensed advisor.</p>
+      </form>
+      <div class="thankyou" id="thankyou">
+        <div class="thankyou-mark">You're on the ledger.</div>
+        <p>We'll be in touch with what we find. In the meantime, feel free to check another bill, the more we look at, the more we tend to find.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <div class="brand">
+        <div class="logo-mark">m</div>
+        <div class="brand-text">
+          <div class="brand-name">moyo</div>
+        </div>
+      </div>
+      <p class="footer-tagline">Find money. Keep money. Grow money. An early-stage product, built in the open.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Product</div>
+      <ul class="footer-links">
+        <li><a href="#signup">Get early access</a></li>
+        <li><a href="#">How it works</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Company</div>
+      <ul class="footer-links">
+        <li><a href="privacy.html">Privacy Policy</a></li>
+        <li><a href="terms.html">Terms of Service</a></li>
+        <li><a href="mailto:hello@moyoapp.co">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div>© 2026 Moyo. All rights reserved.</div>
+    <div>moyoapp.co</div>
+  </div>
+</footer>
+
+<script>
+  const leakForm = document.getElementById('leakForm');
+  leakForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const submitBtn = leakForm.querySelector('.submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+
+    fetch(leakForm.action, {
+      method: 'POST',
+      body: new FormData(leakForm),
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(response => {
+      if (response.ok) {
+        leakForm.classList.add('hidden');
+        document.getElementById('thankyou').classList.add('active');
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Find my leak';
+        alert('Something went wrong submitting that, mind trying again?');
+      }
+    })
+    .catch(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Find my leak';
+      alert('Something went wrong submitting that, mind trying again?');
+    });
+  });
+
+  // Bento tile: animate the Bill Leak Report counter on hover
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const billTile = document.querySelector('.bento-tile[data-tone="green"] .bento-counter');
+  if (billTile && !prefersReducedMotion) {
+    const spans = billTile.querySelectorAll('.counter-value');
+    const targets = [240, 660];
+    const parentTile = billTile.closest('.bento-tile');
+    let animated = false;
+    parentTile.addEventListener('mouseenter', () => {
+      if (animated) return;
+      animated = true;
+      spans.forEach((span, i) => {
+        const target = targets[i];
+        const duration = 700;
+        const start = performance.now();
+        function tick(now){
+          const progress = Math.min((now - start) / duration, 1);
+          span.textContent = Math.round(progress * target);
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    });
+  }
+</script>
+
+</body>
+</html>

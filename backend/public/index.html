@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Moyo — Personal Test (Plaid-connected)</title>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<style>
+  :root{
+    --ink:#152219; --paper:#F6F4EF; --evergreen:#1F4536; --accent:#17C964;
+    --line:#E9E4D8; --line-strong:#D6CEBC;
+  }
+  body{font-family:-apple-system,Inter,sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 24px;}
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:26px;margin-bottom:6px;}
+  .sub{color:#5C6A62;font-size:14px;margin-bottom:28px;}
+  button{
+    background:var(--accent);color:var(--ink);border:none;padding:13px 22px;
+    font-size:14px;font-weight:600;border-radius:6px;cursor:pointer;
+  }
+  button:disabled{opacity:0.5;cursor:default;}
+  .bill-row{
+    background:#fff;border:1px solid var(--line-strong);border-radius:6px;
+    padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .bill-name{font-weight:600;font-size:14.5px;}
+  .bill-amount{color:#5C6A62;font-size:13px;}
+  .result-box{
+    background:var(--ink);color:var(--paper);border-radius:6px;padding:16px 18px;
+    margin-top:8px;margin-bottom:14px;font-size:13.5px;line-height:1.6;
+  }
+  .status{font-size:13px;color:#5C6A62;margin:16px 0;}
+  #billsList{margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Moyo — Personal Test</h1>
+  <p class="sub">Connect your bank via Plaid, then check your real recurring bills for savings. Internal use only.</p>
+
+  <button id="connectBtn">Connect my bank</button>
+  <div class="status" id="status"></div>
+
+  <div id="idleCashSection" style="display:none; margin-top:28px;">
+    <h2 style="font-size:18px;margin-bottom:10px;">Idle Cash Check</h2>
+    <button id="idleCashBtn">Check idle cash</button>
+    <div id="idleCashResult"></div>
+  </div>
+
+  <div id="feesSection" style="display:none; margin-top:28px;">
+    <h2 style="font-size:18px;margin-bottom:10px;">Fee Check</h2>
+    <button id="feesBtn">Check for fees</button>
+    <div id="feesResult"></div>
+  </div>
+
+  <div id="billsList"></div>
+  <div id="overlapSection" style="display:none; margin-top:20px;">
+    <button id="overlapBtn">Check for subscription overlap</button>
+    <div id="overlapResult"></div>
+  </div>
+
+  <div id="cardValueSection" style="display:none; margin-top:32px; border-top:1px solid var(--line-strong); padding-top:24px;">
+    <h2 style="font-size:18px;margin-bottom:6px;">Is your card's annual fee worth it?</h2>
+    <p style="font-size:13px;color:#5C6A62;margin-bottom:16px;">Combines your real spend with a few quick questions about benefits we can't see in transaction data.</p>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">Which card?</label>
+      <select id="cardSelect" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;"></select>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">Total annual fee (incl. authorized users)</label>
+      <input type="number" id="annualFeeInput" placeholder="e.g. 1100" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;">
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">Used Global Entry/TSA PreCheck credit this cycle?</label>
+      <select id="globalEntrySelect" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;">
+        <option value="no">No</option>
+        <option value="yes">Yes</option>
+        <option value="not sure">Not sure</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">Approx. lounge visits this year</label>
+      <input type="number" id="loungeInput" placeholder="e.g. 4" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;">
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">Used delivery/rideshare monthly credits?</label>
+      <select id="doordashSelect" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;">
+        <option value="rarely/never">Rarely/never</option>
+        <option value="some months">Some months</option>
+        <option value="most months">Most months</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <label style="display:block;font-size:12px;color:#5C6A62;margin-bottom:6px;">How do you usually redeem points?</label>
+      <select id="redemptionSelect" style="width:100%;padding:10px;border:1px solid var(--line-strong);border-radius:4px;">
+        <option value="cash out at ~1 cent per point">Cash out (~1¢/point)</option>
+        <option value="transfer to travel partners for higher value">Transfer to travel partners</option>
+        <option value="not sure / rarely redeem">Not sure / rarely redeem</option>
+      </select>
+    </div>
+
+    <button id="cardValueBtn">Analyze card value</button>
+    <div id="cardValueResult"></div>
+  </div>
+</div>
+
+<script>
+  const connectBtn = document.getElementById('connectBtn');
+  const statusEl = document.getElementById('status');
+  const billsList = document.getElementById('billsList');
+
+  connectBtn.addEventListener('click', async () => {
+    statusEl.textContent = 'Setting up secure connection…';
+    const res = await fetch('/api/create_link_token', { method: 'POST' });
+    const data = await res.json();
+    if (!data.link_token) {
+      statusEl.textContent = data.error || 'Could not start Plaid Link. Check server logs.';
+      return;
+    }
+
+    const handler = Plaid.create({
+      token: data.link_token,
+      onSuccess: async (public_token) => {
+        statusEl.textContent = 'Connected. Exchanging token…';
+        const exchangeRes = await fetch('/api/exchange_public_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ public_token }),
+        });
+        const exchangeData = await exchangeRes.json();
+        if (exchangeData.success) {
+          statusEl.textContent = 'Bank connected. Loading recurring bills…';
+          document.getElementById('idleCashSection').style.display = 'block';
+          document.getElementById('feesSection').style.display = 'block';
+          document.getElementById('cardValueSection').style.display = 'block';
+          loadRecurringBills();
+          loadCreditAccounts();
+        } else {
+          statusEl.textContent = exchangeData.error || 'Exchange failed.';
+        }
+      },
+      onExit: () => { statusEl.textContent = 'Link closed.'; },
+    });
+    handler.open();
+  });
+
+  let loadedBills = [];
+
+  async function loadRecurringBills(){
+    const res = await fetch('/api/recurring');
+    const data = await res.json();
+    if (data.error) {
+      statusEl.textContent = data.error;
+      return;
+    }
+    statusEl.textContent = `Found ${data.bills.length} recurring bill(s).`;
+    loadedBills = data.bills;
+    billsList.innerHTML = '';
+    if (data.bills.length > 1) {
+      document.getElementById('overlapSection').style.display = 'block';
+    }
+    data.bills.forEach(bill => {
+      const row = document.createElement('div');
+      row.className = 'bill-row';
+      row.innerHTML = `
+        <div>
+          <div class="bill-name">${bill.merchant}</div>
+          <div class="bill-amount">$${bill.average_amount.toFixed(2)} · ${bill.frequency}</div>
+        </div>
+        <button class="check-btn">Check savings</button>
+      `;
+      row.querySelector('.check-btn').addEventListener('click', () => runAnalysis(bill, row));
+      billsList.appendChild(row);
+    });
+  }
+
+  async function runAnalysis(bill, row){
+    const btn = row.querySelector('.check-btn');
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchant: bill.merchant,
+        amount: bill.average_amount,
+        frequency: bill.frequency,
+      }),
+    });
+    const result = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Check savings';
+
+    const box = document.createElement('div');
+    box.className = 'result-box';
+    if (result.error) {
+      box.textContent = result.error;
+    } else {
+      const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
+      box.innerHTML = `<strong>${result.summary}</strong><br>Potential savings: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+    }
+    row.after(box);
+  }
+
+  document.getElementById('idleCashBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('idleCashBtn');
+    const resultEl = document.getElementById('idleCashResult');
+    btn.disabled = true;
+    btn.textContent = 'Checking accounts…';
+    resultEl.innerHTML = '';
+
+    const accountsRes = await fetch('/api/accounts');
+    const accountsData = await accountsRes.json();
+    if (accountsData.error) {
+      btn.disabled = false;
+      btn.textContent = 'Check idle cash';
+      resultEl.innerHTML = `<div class="result-box">${accountsData.error}</div>`;
+      return;
+    }
+
+    if (!accountsData.accounts.length) {
+      btn.disabled = false;
+      btn.textContent = 'Check idle cash';
+      resultEl.innerHTML = `<div class="result-box">No checking or savings accounts found.</div>`;
+      return;
+    }
+
+    btn.textContent = 'Analyzing…';
+    const analyzeRes = await fetch('/api/analyze-idle-cash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accounts: accountsData.accounts }),
+    });
+    const result = await analyzeRes.json();
+    btn.disabled = false;
+    btn.textContent = 'Check idle cash';
+
+    const accountsListHtml = accountsData.accounts.map(a => `${a.name} (${a.subtype}): $${a.balance.toLocaleString()}`).join('<br>');
+
+    const box = document.createElement('div');
+    box.className = 'result-box';
+    if (result.error) {
+      box.textContent = result.error;
+    } else {
+      const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
+      box.innerHTML = `<strong>Accounts found:</strong><br>${accountsListHtml}<br><br><strong>${result.summary}</strong><br>Potential additional earnings: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+    }
+    resultEl.appendChild(box);
+  });
+
+  document.getElementById('feesBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('feesBtn');
+    const resultEl = document.getElementById('feesResult');
+    btn.disabled = true;
+    btn.textContent = 'Scanning transactions…';
+    resultEl.innerHTML = '';
+
+    const feesRes = await fetch('/api/fees');
+    const feesData = await feesRes.json();
+    if (feesData.error) {
+      btn.disabled = false;
+      btn.textContent = 'Check for fees';
+      resultEl.innerHTML = `<div class="result-box">${feesData.error}</div>`;
+      return;
+    }
+
+    if (!feesData.fees.length) {
+      btn.disabled = false;
+      btn.textContent = 'Check for fees';
+      resultEl.innerHTML = `<div class="result-box">No bank fees found in the past year. Good sign.</div>`;
+      return;
+    }
+
+    btn.textContent = 'Analyzing…';
+    const analyzeRes = await fetch('/api/analyze-fees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fees: feesData.fees, totalFees: feesData.totalFees, periodDays: feesData.periodDays }),
+    });
+    const result = await analyzeRes.json();
+    btn.disabled = false;
+    btn.textContent = 'Check for fees';
+
+    const feesListHtml = feesData.fees.slice(0, 10).map(f => `${f.date}: ${f.name} — $${f.amount.toFixed(2)}`).join('<br>');
+    const moreCount = feesData.fees.length - 10;
+
+    const box = document.createElement('div');
+    box.className = 'result-box';
+    if (result.error) {
+      box.textContent = result.error;
+    } else {
+      const alts = (result.alternatives || []).map(a => `${a.provider} — ${a.note}`).join('<br>');
+      box.innerHTML = `<strong>Fees found (past year, total $${feesData.totalFees.toFixed(2)}):</strong><br>${feesListHtml}${moreCount > 0 ? `<br>(+${moreCount} more)` : ''}<br><br><strong>${result.summary}</strong><br>Potentially avoidable: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+    }
+    resultEl.appendChild(box);
+  });
+
+  document.getElementById('overlapBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('overlapBtn');
+    const resultEl = document.getElementById('overlapResult');
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+    resultEl.innerHTML = '';
+
+    const res = await fetch('/api/analyze-overlap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bills: loadedBills }),
+    });
+    const result = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Check for subscription overlap';
+
+    const box = document.createElement('div');
+    box.className = 'result-box';
+    if (result.error) {
+      box.textContent = result.error;
+    } else {
+      const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
+      box.innerHTML = `<strong>${result.summary}</strong><br>Potential savings from cutting overlap: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+    }
+    resultEl.appendChild(box);
+  });
+
+  async function loadCreditAccounts(){
+    const res = await fetch('/api/credit-accounts');
+    const data = await res.json();
+    const select = document.getElementById('cardSelect');
+    select.innerHTML = '';
+    if (data.error || !data.accounts.length) {
+      select.innerHTML = '<option>No credit card accounts found</option>';
+      return;
+    }
+    data.accounts.forEach(acct => {
+      const opt = document.createElement('option');
+      opt.value = acct.account_id;
+      opt.textContent = `${acct.name} (…${acct.mask})`;
+      select.appendChild(opt);
+    });
+  }
+
+  document.getElementById('cardValueBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('cardValueBtn');
+    const resultEl = document.getElementById('cardValueResult');
+    const accountId = document.getElementById('cardSelect').value;
+    const annualFee = parseFloat(document.getElementById('annualFeeInput').value);
+    const cardName = document.getElementById('cardSelect').selectedOptions[0]?.textContent || 'Card';
+
+    if (!accountId || !annualFee) {
+      alert('Pick a card and enter the annual fee first.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Pulling spend data…';
+    resultEl.innerHTML = '';
+
+    const spendRes = await fetch(`/api/card-spend?account_id=${encodeURIComponent(accountId)}`);
+    const spend = await spendRes.json();
+    if (spend.error) {
+      btn.disabled = false;
+      btn.textContent = 'Analyze card value';
+      resultEl.innerHTML = `<div class="result-box">${spend.error}</div>`;
+      return;
+    }
+
+    const selfReport = {
+      globalEntry: document.getElementById('globalEntrySelect').value,
+      loungeVisits: document.getElementById('loungeInput').value || '0',
+      doordashLyft: document.getElementById('doordashSelect').value,
+      redemptionStyle: document.getElementById('redemptionSelect').value,
+    };
+
+    btn.textContent = 'Analyzing…';
+    const analyzeRes = await fetch('/api/analyze-card-value', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardName, annualFee, spend, selfReport }),
+    });
+    const result = await analyzeRes.json();
+    btn.disabled = false;
+    btn.textContent = 'Analyze card value';
+
+    const box = document.createElement('div');
+    box.className = 'result-box';
+    if (result.error) {
+      box.textContent = result.error;
+    } else {
+      const verified = (result.verified_value || []).map(v => `${v.item}: $${v.estimated_value} — ${v.note}`).join('<br>');
+      const estimated = (result.estimated_value || []).map(v => `${v.item}: $${v.estimated_value} — ${v.note}`).join('<br>');
+      const steps = (result.next_steps || []).map(s => `• ${s}`).join('<br>');
+      const low = result.total_value_low ?? '?';
+      const high = result.total_value_high ?? '?';
+      const fee = result.annual_fee ?? annualFee;
+      box.innerHTML = `
+        <strong>Verdict: ${(result.verdict || 'unknown').toUpperCase()}</strong><br>
+        ${result.summary || ''}<br><br>
+        <u>From your actual spend data:</u><br>${verified || '(none found)'}<br><br>
+        <u>Based on what you reported:</u><br>${estimated || '(none reported)'}<br><br>
+        <strong>Total value range: $${low}–$${high}</strong> vs. $${fee} fee<br><br>
+        ${steps}
+      `;
+    }
+    resultEl.appendChild(box);
+  });
+</script>
+</body>
+</html>
