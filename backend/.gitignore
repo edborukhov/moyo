@@ -1,3 +1,5 @@
 node_modules/
 .env
 access_token.json
+moyo.db
+moyo.db-*

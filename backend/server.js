@@ -1,13 +1,16 @@
-// Moyo personal backend — for Edward's own testing only.
+// Moyo backend — multi-user version.
 // Reads all secrets from environment variables. Never hardcode real keys here.
 
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const fs = require('fs');
 const path = require('path');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
+
+const { router: authRouter, requireAuth } = require('./auth');
+const { saveAccessToken, loadAccessToken, hasConnectedBank } = require('./plaidTokens');
 
 const app = express();
 app.use(cors());
@@ -15,10 +18,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 4000;
-const ACCESS_TOKEN_FILE = path.join(__dirname, 'access_token.json');
 
 // ---------- Plaid setup ----------
-const requiredEnvVars = ['PLAID_CLIENT_ID', 'PLAID_SECRET', 'ANTHROPIC_API_KEY'];
+const requiredEnvVars = ['PLAID_CLIENT_ID', 'PLAID_SECRET', 'ANTHROPIC_API_KEY', 'JWT_SECRET', 'ENCRYPTION_KEY'];
 const missing = requiredEnvVars.filter(key => !process.env[key]);
 if (missing.length) {
   console.warn(`⚠️  Missing environment variables: ${missing.join(', ')}`);
@@ -36,20 +38,26 @@ const plaidConfig = new Configuration({
 });
 const plaidClient = new PlaidApi(plaidConfig);
 
-function saveAccessToken(token, itemId) {
-  fs.writeFileSync(ACCESS_TOKEN_FILE, JSON.stringify({ access_token: token, item_id: itemId }, null, 2));
-}
-function loadAccessToken() {
-  if (!fs.existsSync(ACCESS_TOKEN_FILE)) return null;
-  return JSON.parse(fs.readFileSync(ACCESS_TOKEN_FILE, 'utf8'));
-}
+// ---------- Auth routes (signup / login / me) ----------
+app.use('/api/auth', authRouter);
 
-// ---------- Plaid Link: create a link token ----------
-app.post('/api/create_link_token', async (req, res) => {
+// ---------- Rate limiting on the AI-calling endpoints ----------
+// Keeps Anthropic API cost exposure bounded per beta tester. Adjust as real usage patterns emerge.
+const analysisLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hours
+  max: 30, // 30 analysis calls/day/user is generous for a single person testing Moyo's 5 features
+  keyGenerator: (req) => (req.userId ? `user:${req.userId}` : ipKeyGenerator(req)),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Daily analysis limit reached. This resets in 24 hours — it exists to keep AI costs predictable during beta.' },
+});
+
+// ---------- Plaid Link: create a link token (per user) ----------
+app.post('/api/create_link_token', requireAuth, async (req, res) => {
   try {
     const response = await plaidClient.linkTokenCreate({
-      user: { client_user_id: 'moyo-internal-user' },
-      client_name: 'Moyo (internal test)',
+      user: { client_user_id: String(req.userId) },
+      client_name: 'Moyo',
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
@@ -61,12 +69,12 @@ app.post('/api/create_link_token', async (req, res) => {
   }
 });
 
-// ---------- Plaid Link: exchange public_token for access_token ----------
-app.post('/api/exchange_public_token', async (req, res) => {
+// ---------- Plaid Link: exchange public_token for access_token (stored encrypted, scoped to this user) ----------
+app.post('/api/exchange_public_token', requireAuth, async (req, res) => {
   try {
     const { public_token } = req.body;
     const response = await plaidClient.itemPublicTokenExchange({ public_token });
-    saveAccessToken(response.data.access_token, response.data.item_id);
+    saveAccessToken(req.userId, response.data.access_token, response.data.item_id);
     res.json({ success: true });
   } catch (err) {
     console.error(err?.response?.data || err.message);
@@ -75,16 +83,15 @@ app.post('/api/exchange_public_token', async (req, res) => {
 });
 
 // ---------- Fetch recurring transactions (Plaid auto-detects subscriptions/bills) ----------
-app.get('/api/recurring', async (req, res) => {
+app.get('/api/recurring', requireAuth, async (req, res) => {
   try {
-    const saved = loadAccessToken();
+    const saved = loadAccessToken(req.userId);
     if (!saved) return res.status(400).json({ error: 'No bank connected yet. Connect via Plaid Link first.' });
 
     const response = await plaidClient.transactionsRecurringGet({
       access_token: saved.access_token,
     });
 
-    // Outflow streams are the ones that look like bills/subscriptions
     const bills = (response.data.outflow_streams || []).map(stream => ({
       merchant: stream.merchant_name || stream.description || 'Unknown',
       average_amount: stream.average_amount?.amount || 0,
@@ -144,8 +151,6 @@ async function runAnalysis(prompt, fallbackObject) {
       }
     }
     if (!result) {
-      // Use the caller's own fallback shape so every field the frontend expects still exists,
-      // just with a summary explaining what happened instead of fabricated values.
       result = {
         ...fallbackObject,
         summary: rawText.slice(0, 400) || 'The response could not be fully parsed. Try again, it usually works on retry.',
@@ -156,7 +161,7 @@ async function runAnalysis(prompt, fallbackObject) {
 }
 
 // ---------- Run a savings check on a detected bill, using the same mechanism already validated ----------
-app.post('/api/analyze', async (req, res) => {
+app.post('/api/analyze', requireAuth, analysisLimiter, async (req, res) => {
   try {
     const { merchant, amount, frequency, context } = req.body;
     if (!merchant || !amount) {
@@ -202,16 +207,15 @@ Be honest: if you can't find a meaningfully better option, say so and set saving
 });
 
 // ---------- Fetch account balances (for idle cash detection) ----------
-app.get('/api/accounts', async (req, res) => {
+app.get('/api/accounts', requireAuth, async (req, res) => {
   try {
-    const saved = loadAccessToken();
+    const saved = loadAccessToken(req.userId);
     if (!saved) return res.status(400).json({ error: 'No bank connected yet. Connect via Plaid Link first.' });
 
     const response = await plaidClient.accountsBalanceGet({
       access_token: saved.access_token,
     });
 
-    // Only checking/savings accounts are relevant for idle cash, not credit cards or loans
     const accounts = (response.data.accounts || [])
       .filter(acct => acct.type === 'depository')
       .map(acct => ({
@@ -228,7 +232,7 @@ app.get('/api/accounts', async (req, res) => {
 });
 
 // ---------- Analyze idle cash: compare against current high-yield savings rates ----------
-app.post('/api/analyze-idle-cash', async (req, res) => {
+app.post('/api/analyze-idle-cash', requireAuth, analysisLimiter, async (req, res) => {
   try {
     const { accounts } = req.body;
     if (!accounts || !accounts.length) {
@@ -279,9 +283,9 @@ Be honest: if the balance is too small to matter meaningfully (e.g. under a few 
 });
 
 // ---------- Fetch transactions and detect bank fees (overdraft, ATM, maintenance, etc.) ----------
-app.get('/api/fees', async (req, res) => {
+app.get('/api/fees', requireAuth, async (req, res) => {
   try {
-    const saved = loadAccessToken();
+    const saved = loadAccessToken(req.userId);
     if (!saved) return res.status(400).json({ error: 'No bank connected yet. Connect via Plaid Link first.' });
 
     const endDate = new Date();
@@ -319,7 +323,7 @@ app.get('/api/fees', async (req, res) => {
 });
 
 // ---------- Analyze detected fees: summarize pattern and suggest fee-free alternatives ----------
-app.post('/api/analyze-fees', async (req, res) => {
+app.post('/api/analyze-fees', requireAuth, analysisLimiter, async (req, res) => {
   try {
     const { fees, totalFees, periodDays } = req.body;
     if (!fees || !fees.length) {
@@ -375,7 +379,7 @@ function annualizeAmount(amount, frequency) {
   return Math.round((amount || 0) * (multipliers[frequency] || 12));
 }
 
-app.post('/api/analyze-overlap', async (req, res) => {
+app.post('/api/analyze-overlap', requireAuth, analysisLimiter, async (req, res) => {
   try {
     const { bills } = req.body;
     if (!bills || !bills.length) {
@@ -427,9 +431,9 @@ Be honest: if nothing looks clearly redundant, say so plainly and set savings to
 });
 
 // ---------- List credit card accounts (so the user can pick which one to analyze) ----------
-app.get('/api/credit-accounts', async (req, res) => {
+app.get('/api/credit-accounts', requireAuth, async (req, res) => {
   try {
-    const saved = loadAccessToken();
+    const saved = loadAccessToken(req.userId);
     if (!saved) return res.status(400).json({ error: 'No bank connected yet. Connect via Plaid Link first.' });
 
     const response = await plaidClient.accountsBalanceGet({
@@ -452,9 +456,9 @@ app.get('/api/credit-accounts', async (req, res) => {
 });
 
 // ---------- Pull and categorize a year of spend on a specific card ----------
-app.get('/api/card-spend', async (req, res) => {
+app.get('/api/card-spend', requireAuth, async (req, res) => {
   try {
-    const saved = loadAccessToken();
+    const saved = loadAccessToken(req.userId);
     if (!saved) return res.status(400).json({ error: 'No bank connected yet. Connect via Plaid Link first.' });
 
     const { account_id } = req.query;
@@ -491,7 +495,7 @@ app.get('/api/card-spend', async (req, res) => {
 });
 
 // ---------- Analyze whether the annual fee is justified, combining real spend + self-reported benefit usage ----------
-app.post('/api/analyze-card-value', async (req, res) => {
+app.post('/api/analyze-card-value', requireAuth, analysisLimiter, async (req, res) => {
   try {
     const { cardName, annualFee, spend, selfReport } = req.body;
     if (!cardName || !annualFee || !spend) {
