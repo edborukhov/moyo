@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moyo — Log in</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    background: #0b0b0f;
+    color: #f2f2f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: #16161d;
+    border: 1px solid #2a2a35;
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 380px;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  p.sub { color: #9a9aa8; margin: 0 0 24px; font-size: 14px; }
+  label { display: block; font-size: 13px; color: #b5b5c2; margin: 16px 0 6px; }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    background: #0b0b0f;
+    border: 1px solid #2a2a35;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #f2f2f5;
+    font-size: 15px;
+  }
+  input:focus { outline: none; border-color: #6b6bf7; }
+  button {
+    width: 100%;
+    margin-top: 24px;
+    padding: 11px;
+    border: none;
+    border-radius: 8px;
+    background: #6b6bf7;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .toggle {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
+    color: #9a9aa8;
+  }
+  .toggle a { color: #8f8ff9; text-decoration: none; cursor: pointer; }
+  .error {
+    background: #2a1418;
+    border: 1px solid #5c2530;
+    color: #f5a3ae;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="formTitle">Log in to Moyo</h1>
+    <p class="sub" id="formSub">Your bill leak report is waiting.</p>
+
+    <form id="authForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" required autocomplete="email">
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required autocomplete="current-password" minlength="8">
+
+      <div class="error" id="errorBox"></div>
+      <button type="submit" id="submitBtn">Log in</button>
+    </form>
+
+    <div class="toggle">
+      <span id="toggleText">New here?</span>
+      <a id="toggleLink">Create an account</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('authForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const errorBox = document.getElementById('errorBox');
+    const submitBtn = document.getElementById('submitBtn');
+    const formTitle = document.getElementById('formTitle');
+    const formSub = document.getElementById('formSub');
+    const toggleText = document.getElementById('toggleText');
+    const toggleLink = document.getElementById('toggleLink');
+
+    let mode = 'login'; // or 'signup'
+
+    // If already logged in, skip straight to the app.
+    if (localStorage.getItem('moyo_token')) {
+      window.location.href = '/';
+    }
+
+    function setMode(next) {
+      mode = next;
+      if (mode === 'login') {
+        formTitle.textContent = 'Log in to Moyo';
+        formSub.textContent = 'Your bill leak report is waiting.';
+        submitBtn.textContent = 'Log in';
+        toggleText.textContent = 'New here?';
+        toggleLink.textContent = 'Create an account';
+        passwordInput.autocomplete = 'current-password';
+      } else {
+        formTitle.textContent = 'Create your account';
+        formSub.textContent = 'Takes about 10 seconds.';
+        submitBtn.textContent = 'Sign up';
+        toggleText.textContent = 'Already have an account?';
+        toggleLink.textContent = 'Log in';
+        passwordInput.autocomplete = 'new-password';
+      }
+      errorBox.style.display = 'none';
+    }
+
+    toggleLink.addEventListener('click', () => setMode(mode === 'login' ? 'signup' : 'login'));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.textContent = mode === 'login' ? 'Logging in…' : 'Creating account…';
+
+      try {
+        const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailInput.value.trim(), password: passwordInput.value }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Something went wrong.');
+        }
+
+        localStorage.setItem('moyo_token', data.token);
+        localStorage.setItem('moyo_user_email', data.user.email);
+        window.location.href = '/';
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = mode === 'login' ? 'Log in' : 'Sign up';
+      }
+    });
+  </script>
+</body>
+</html>
