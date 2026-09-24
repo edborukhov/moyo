@@ -6,6 +6,9 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
@@ -61,6 +64,7 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
       products: ['transactions'],
       country_codes: ['US'],
       language: 'en',
+      redirect_uri: process.env.PLAID_REDIRECT_URI,
     });
     res.json({ link_token: response.data.link_token });
   } catch (err) {
@@ -562,8 +566,16 @@ Respond with ONLY valid JSON, no markdown, no code fences, no commentary outside
   }
 });
 
-app.listen(PORT, () => {
+// Plain HTTP locally — for OAuth institutions (Chase, etc.) we tunnel through ngrok,
+// which terminates HTTPS externally and forwards to this local HTTP port. Access the
+// app via the ngrok https URL (see PLAID_REDIRECT_URI in .env), not localhost directly,
+// when testing OAuth bank connections.
+http.createServer(app).listen(PORT, () => {
   console.log(`Moyo backend running at http://localhost:${PORT}`);
+  if (process.env.PLAID_REDIRECT_URI) {
+    console.log(`   OAuth redirect URI configured: ${process.env.PLAID_REDIRECT_URI}`);
+    console.log('   For OAuth banks (Chase, etc.), access the app through your ngrok URL, not localhost directly.');
+  }
   if (missing.length) {
     console.log(`⚠️  Remember to fill in: ${missing.join(', ')} in your .env file`);
   }

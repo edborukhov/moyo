@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Moyo — Personal Test (Plaid-connected)</title>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script src="/auth-client.js"></script>
 <style>
   :root{
     --ink:#152219; --paper:#F6F4EF; --evergreen:#1F4536; --accent:#17C964;
@@ -110,13 +111,29 @@
 </div>
 
 <script>
+  // Require login before doing anything else on this page.
+  if (!moyoRequireAuth()) {
+    throw new Error('Redirecting to login...');
+  }
+
   const connectBtn = document.getElementById('connectBtn');
   const statusEl = document.getElementById('status');
   const billsList = document.getElementById('billsList');
 
+  // Small logged-in-as / log out indicator.
+  const userBar = document.createElement('div');
+  userBar.style.cssText = 'font-size:12px;color:#5C6A62;margin-bottom:14px;';
+  const userEmail = localStorage.getItem('moyo_user_email') || '';
+  userBar.innerHTML = `Logged in as ${userEmail} &middot; <a href="#" id="logoutLink" style="color:#5C6A62;">Log out</a>`;
+  document.querySelector('.wrap').insertBefore(userBar, document.querySelector('.wrap').firstChild.nextSibling);
+  document.getElementById('logoutLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    moyoLogout();
+  });
+
   connectBtn.addEventListener('click', async () => {
     statusEl.textContent = 'Setting up secure connection…';
-    const res = await fetch('/api/create_link_token', { method: 'POST' });
+    const res = await moyoFetch('/api/create_link_token', { method: 'POST' });
     const data = await res.json();
     if (!data.link_token) {
       statusEl.textContent = data.error || 'Could not start Plaid Link. Check server logs.';
@@ -127,7 +144,7 @@
       token: data.link_token,
       onSuccess: async (public_token) => {
         statusEl.textContent = 'Connected. Exchanging token…';
-        const exchangeRes = await fetch('/api/exchange_public_token', {
+        const exchangeRes = await moyoFetch('/api/exchange_public_token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ public_token }),
@@ -152,7 +169,7 @@
   let loadedBills = [];
 
   async function loadRecurringBills(){
-    const res = await fetch('/api/recurring');
+    const res = await moyoFetch('/api/recurring');
     const data = await res.json();
     if (data.error) {
       statusEl.textContent = data.error;
@@ -184,7 +201,7 @@
     btn.disabled = true;
     btn.textContent = 'Checking…';
 
-    const res = await fetch('/api/analyze', {
+    const res = await moyoFetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -215,7 +232,7 @@
     btn.textContent = 'Checking accounts…';
     resultEl.innerHTML = '';
 
-    const accountsRes = await fetch('/api/accounts');
+    const accountsRes = await moyoFetch('/api/accounts');
     const accountsData = await accountsRes.json();
     if (accountsData.error) {
       btn.disabled = false;
@@ -232,7 +249,7 @@
     }
 
     btn.textContent = 'Analyzing…';
-    const analyzeRes = await fetch('/api/analyze-idle-cash', {
+    const analyzeRes = await moyoFetch('/api/analyze-idle-cash', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ accounts: accountsData.accounts }),
@@ -261,7 +278,7 @@
     btn.textContent = 'Scanning transactions…';
     resultEl.innerHTML = '';
 
-    const feesRes = await fetch('/api/fees');
+    const feesRes = await moyoFetch('/api/fees');
     const feesData = await feesRes.json();
     if (feesData.error) {
       btn.disabled = false;
@@ -278,7 +295,7 @@
     }
 
     btn.textContent = 'Analyzing…';
-    const analyzeRes = await fetch('/api/analyze-fees', {
+    const analyzeRes = await moyoFetch('/api/analyze-fees', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fees: feesData.fees, totalFees: feesData.totalFees, periodDays: feesData.periodDays }),
@@ -308,7 +325,7 @@
     btn.textContent = 'Analyzing…';
     resultEl.innerHTML = '';
 
-    const res = await fetch('/api/analyze-overlap', {
+    const res = await moyoFetch('/api/analyze-overlap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bills: loadedBills }),
@@ -329,7 +346,7 @@
   });
 
   async function loadCreditAccounts(){
-    const res = await fetch('/api/credit-accounts');
+    const res = await moyoFetch('/api/credit-accounts');
     const data = await res.json();
     const select = document.getElementById('cardSelect');
     select.innerHTML = '';
@@ -361,7 +378,7 @@
     btn.textContent = 'Pulling spend data…';
     resultEl.innerHTML = '';
 
-    const spendRes = await fetch(`/api/card-spend?account_id=${encodeURIComponent(accountId)}`);
+    const spendRes = await moyoFetch(`/api/card-spend?account_id=${encodeURIComponent(accountId)}`);
     const spend = await spendRes.json();
     if (spend.error) {
       btn.disabled = false;
@@ -378,7 +395,7 @@
     };
 
     btn.textContent = 'Analyzing…';
-    const analyzeRes = await fetch('/api/analyze-card-value', {
+    const analyzeRes = await moyoFetch('/api/analyze-card-value', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cardName, annualFee, spend, selfReport }),

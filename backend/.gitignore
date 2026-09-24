@@ -3,3 +3,9 @@ node_modules/
 access_token.json
 moyo.db
 moyo.db-*
+.env.bak
+localhost.pem
+localhost-key.pem
+*.pre-auth.bak
+*.pre-https.bak
+*.pre-redirect-uri.bak
