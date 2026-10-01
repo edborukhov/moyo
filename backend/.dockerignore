@@ -1,0 +1,6 @@
+node_modules
+.env
+.env.bak
+moyo.db
+*.bak
+.git

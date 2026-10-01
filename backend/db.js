@@ -4,7 +4,9 @@
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const DB_FILE = path.join(__dirname, 'moyo.db');
+// DB_FILE can be overridden to point at a mounted persistent volume in production
+// (e.g. Fly.io: DB_FILE=/data/moyo.db). Defaults to a local file for dev.
+const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'moyo.db');
 const db = new Database(DB_FILE);
 // WAL mode needs shared-memory locking that some mounted/networked filesystems don't support;
 // the default rollback-journal mode is slightly slower under heavy concurrency but works everywhere.

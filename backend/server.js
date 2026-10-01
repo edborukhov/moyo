@@ -172,7 +172,7 @@ app.post('/api/analyze', requireAuth, analysisLimiter, async (req, res) => {
       return res.status(400).json({ error: 'merchant and amount are required.' });
     }
 
-    const annualEstimate = frequency === 'MONTHLY' ? Math.round(amount * 12) : Math.round(amount);
+    const annualEstimate = annualizeAmount(amount, frequency);
 
     const prompt = `Search the web for current pricing alternatives comparable to this recurring bill.
 
