@@ -4,15 +4,19 @@
 <meta charset="UTF-8">
 <title>Moyo — Personal Test (Plaid-connected)</title>
 <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="/auth-client.js"></script>
 <style>
   :root{
     --ink:#152219; --paper:#F6F4EF; --evergreen:#1F4536; --accent:#17C964;
     --line:#E9E4D8; --line-strong:#D6CEBC;
   }
-  body{font-family:-apple-system,Inter,sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 24px;}
+  body{font-family:'Inter',-apple-system,sans-serif;background:var(--paper);color:var(--ink);margin:0;padding:40px 24px;}
   .wrap{max-width:640px;margin:0 auto;}
-  h1{font-size:26px;margin-bottom:6px;}
+  h1{font-family:'Sora',sans-serif;font-weight:700;font-size:27px;margin-bottom:6px;letter-spacing:-0.01em;}
+  h2{font-family:'Sora',sans-serif;font-weight:600;letter-spacing:-0.01em;}
   .sub{color:#5C6A62;font-size:14px;margin-bottom:28px;}
   button{
     background:var(--accent);color:var(--ink);border:none;padding:13px 22px;
@@ -26,9 +30,19 @@
   .bill-name{font-weight:600;font-size:14.5px;}
   .bill-amount{color:#5C6A62;font-size:13px;}
   .result-box{
-    background:var(--ink);color:var(--paper);border-radius:6px;padding:16px 18px;
-    margin-top:8px;margin-bottom:14px;font-size:13.5px;line-height:1.6;
+    background:#fff;border:1px solid var(--line-strong);border-left:4px solid var(--line-strong);
+    border-radius:6px;padding:18px 20px;margin-top:8px;margin-bottom:14px;
+    font-size:13.5px;line-height:1.6;color:var(--ink);
   }
+  .result-box.savings{border-left-color:var(--accent);}
+  .result-box.warn{border-left-color:#C98A3B;}
+  .result-stat{
+    font-family:'Sora',sans-serif;font-weight:700;font-size:32px;line-height:1.1;
+    color:var(--evergreen);font-variant-numeric:tabular-nums;margin-bottom:2px;
+  }
+  .result-stat-label{font-size:12px;color:#5C6A62;margin-bottom:12px;}
+  .result-summary{font-weight:600;margin-bottom:8px;}
+  .result-details{color:#3C4A41;}
   .status{font-size:13px;color:#5C6A62;margin:16px 0;}
   #billsList{margin-top:24px;}
 
@@ -62,7 +76,7 @@
 
 <div class="wrap">
   <h1>Moyo — Personal Test</h1>
-  <p class="sub">Connect your bank via Plaid, then check your real recurring bills for savings. Internal use only.</p>
+  <p class="sub">Connect your bank via Plaid, then check your real recurring bills for savings. Early access — thanks for trying this before anyone else.</p>
 
   <button id="connectBtn">Connect my bank</button>
   <div class="status" id="status"></div>
@@ -155,6 +169,25 @@
   }
   function hideLoading(){
     loadingOverlay.classList.remove('show');
+  }
+
+  // Builds a result card. kind: 'savings' | 'warn' | 'neutral'.
+  // stat/statLabel render as a large headline figure; summary and details follow.
+  function renderResult({ kind, stat, statLabel, summary, details }){
+    const box = document.createElement('div');
+    box.className = 'result-box' + (kind === 'savings' ? ' savings' : kind === 'warn' ? ' warn' : '');
+    let html = '';
+    if (stat) {
+      html += `<div class="result-stat">${stat}</div><div class="result-stat-label">${statLabel || ''}</div>`;
+    }
+    if (summary) {
+      html += `<div class="result-summary">${summary}</div>`;
+    }
+    if (details) {
+      html += `<div class="result-details">${details}</div>`;
+    }
+    box.innerHTML = html;
+    return box;
   }
 
   const connectBtn = document.getElementById('connectBtn');
@@ -262,13 +295,19 @@
     btn.textContent = 'Check savings';
     hideLoading();
 
-    const box = document.createElement('div');
-    box.className = 'result-box';
+    let box;
     if (result.error) {
-      box.textContent = result.error;
+      box = renderResult({ kind: 'neutral', summary: result.error });
     } else {
       const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
-      box.innerHTML = `<strong>${result.summary}</strong><br>Potential savings: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+      const hasSavings = (result.estimated_savings_high || 0) > 0;
+      box = renderResult({
+        kind: hasSavings ? 'savings' : 'neutral',
+        stat: hasSavings ? `$${result.estimated_savings_low}–$${result.estimated_savings_high}/yr` : null,
+        statLabel: hasSavings ? 'potential savings' : null,
+        summary: result.summary,
+        details: alts,
+      });
     }
     row.after(box);
   }
@@ -322,13 +361,19 @@
 
     const accountsListHtml = accountsData.accounts.map(a => `${a.name} (${a.subtype}): $${a.balance.toLocaleString()}`).join('<br>');
 
-    const box = document.createElement('div');
-    box.className = 'result-box';
+    let box;
     if (result.error) {
-      box.textContent = result.error;
+      box = renderResult({ kind: 'neutral', summary: result.error });
     } else {
       const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
-      box.innerHTML = `<strong>Accounts found:</strong><br>${accountsListHtml}<br><br><strong>${result.summary}</strong><br>Potential additional earnings: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+      const hasSavings = (result.estimated_savings_high || 0) > 0;
+      box = renderResult({
+        kind: hasSavings ? 'savings' : 'neutral',
+        stat: hasSavings ? `$${result.estimated_savings_low}–$${result.estimated_savings_high}/yr` : null,
+        statLabel: hasSavings ? 'potential additional earnings' : null,
+        summary: result.summary,
+        details: `<strong>Accounts found:</strong><br>${accountsListHtml}<br><br>${alts}`,
+      });
     }
     resultEl.appendChild(box);
   });
@@ -371,13 +416,19 @@
     const feesListHtml = feesData.fees.slice(0, 10).map(f => `${f.date}: ${f.name} — $${f.amount.toFixed(2)}`).join('<br>');
     const moreCount = feesData.fees.length - 10;
 
-    const box = document.createElement('div');
-    box.className = 'result-box';
+    let box;
     if (result.error) {
-      box.textContent = result.error;
+      box = renderResult({ kind: 'neutral', summary: result.error });
     } else {
       const alts = (result.alternatives || []).map(a => `${a.provider} — ${a.note}`).join('<br>');
-      box.innerHTML = `<strong>Fees found (past year, total $${feesData.totalFees.toFixed(2)}):</strong><br>${feesListHtml}${moreCount > 0 ? `<br>(+${moreCount} more)` : ''}<br><br><strong>${result.summary}</strong><br>Potentially avoidable: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+      const hasSavings = (result.estimated_savings_high || 0) > 0;
+      box = renderResult({
+        kind: hasSavings ? 'savings' : 'neutral',
+        stat: hasSavings ? `$${result.estimated_savings_low}–$${result.estimated_savings_high}/yr` : null,
+        statLabel: hasSavings ? 'potentially avoidable' : null,
+        summary: result.summary,
+        details: `<strong>Fees found (past year, total $${feesData.totalFees.toFixed(2)}):</strong><br>${feesListHtml}${moreCount > 0 ? `<br>(+${moreCount} more)` : ''}<br><br>${alts}`,
+      });
     }
     resultEl.appendChild(box);
   });
@@ -400,13 +451,19 @@
     btn.textContent = 'Check for subscription overlap';
     hideLoading();
 
-    const box = document.createElement('div');
-    box.className = 'result-box';
+    let box;
     if (result.error) {
-      box.textContent = result.error;
+      box = renderResult({ kind: 'neutral', summary: result.error });
     } else {
       const alts = (result.alternatives || []).map(a => `${a.provider}: $${a.estimated_annual}/yr — ${a.note}`).join('<br>');
-      box.innerHTML = `<strong>${result.summary}</strong><br>Potential savings from cutting overlap: $${result.estimated_savings_low}–$${result.estimated_savings_high}/yr<br><br>${alts}`;
+      const hasSavings = (result.estimated_savings_high || 0) > 0;
+      box = renderResult({
+        kind: hasSavings ? 'savings' : 'neutral',
+        stat: hasSavings ? `$${result.estimated_savings_low}–$${result.estimated_savings_high}/yr` : null,
+        statLabel: hasSavings ? 'potential savings from cutting overlap' : null,
+        summary: result.summary,
+        details: alts,
+      });
     }
     resultEl.appendChild(box);
   });
@@ -474,10 +531,9 @@
     btn.textContent = 'Analyze card value';
     hideLoading();
 
-    const box = document.createElement('div');
-    box.className = 'result-box';
+    let box;
     if (result.error) {
-      box.textContent = result.error;
+      box = renderResult({ kind: 'neutral', summary: result.error });
     } else {
       const verified = (result.verified_value || []).map(v => `${v.item}: $${v.estimated_value} — ${v.note}`).join('<br>');
       const estimated = (result.estimated_value || []).map(v => `${v.item}: $${v.estimated_value} — ${v.note}`).join('<br>');
@@ -485,14 +541,15 @@
       const low = result.total_value_low ?? '?';
       const high = result.total_value_high ?? '?';
       const fee = result.annual_fee ?? annualFee;
-      box.innerHTML = `
-        <strong>Verdict: ${(result.verdict || 'unknown').toUpperCase()}</strong><br>
-        ${result.summary || ''}<br><br>
-        <u>From your actual spend data:</u><br>${verified || '(none found)'}<br><br>
-        <u>Based on what you reported:</u><br>${estimated || '(none reported)'}<br><br>
-        <strong>Total value range: $${low}–$${high}</strong> vs. $${fee} fee<br><br>
-        ${steps}
-      `;
+      const verdict = (result.verdict || 'unknown').toLowerCase();
+      const kind = verdict.includes('not') ? 'warn' : verdict.includes('worth') ? 'savings' : 'neutral';
+      box = renderResult({
+        kind,
+        stat: `$${low}–$${high}`,
+        statLabel: `captured value vs. $${fee} annual fee — verdict: ${(result.verdict || 'unknown').toUpperCase()}`,
+        summary: result.summary,
+        details: `<u>From your actual spend data:</u><br>${verified || '(none found)'}<br><br><u>Based on what you reported:</u><br>${estimated || '(none reported)'}<br><br>${steps}`,
+      });
     }
     resultEl.appendChild(box);
   });
